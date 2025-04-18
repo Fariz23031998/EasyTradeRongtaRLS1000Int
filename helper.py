@@ -15,10 +15,8 @@ DEFAULT_CONFIG = {
     "price_type": 1,
     "check_time": 10,
     "plu_file_path": r"C:\Program Files (x86)\RLS1000\easytrade_plu.txp",
-    "handle_big_price": {
-        "active": True,
-        "divider": 100
-    },
+    "use_articul": False,
+    "use_description_as_hotkey": False,
     "units": [
         {
             "name": "Весовой",
@@ -83,3 +81,40 @@ def configure_settings(data_dict=DEFAULT_CONFIG, filename="config.json"):
         write_log_file(f"Error writing to JSON file: {e}")
     else:
         return data_dict
+
+
+def validate_unique_integer_string(s, existing_values: list):
+    """
+    Checks if a string can be converted to an integer between 1-9999
+    and ensures the value is unique among previously processed values.
+
+    Args:
+        s (str): The string to check
+        existing_values (list): List to track previously processed values
+
+    Returns:
+        str: The original string if it represents a unique integer between 1-9999
+        bool: False otherwise
+    """
+
+    # Check if string is empty or not numeric
+    if not s or not s.isdigit():
+        return False
+
+    # Avoid leading zeros (optional)
+    if len(s) > 1 and s[0] == '0':
+        return False
+
+    # Convert to integer and check range
+    try:
+        num = int(s)
+        if 1 <= num <= 9999:
+            # Check for uniqueness
+            if num in existing_values:
+                return False
+            # Add to existing values if unique
+            existing_values.append(num)
+            return s
+        return False
+    except ValueError:
+        return False

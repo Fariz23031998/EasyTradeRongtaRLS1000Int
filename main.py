@@ -1,7 +1,7 @@
 import mysql.connector
 from mysql.connector import Error
 import time
-from helper import create_query_arg, configure_settings, write_log_file
+from helper import create_query_arg, configure_settings, write_log_file, validate_unique_integer_string
 
 class UpdateData:
     def __init__(self):
@@ -14,8 +14,9 @@ class UpdateData:
         self.price_type = self.config['price_type']
         self.check_time = self.config['check_time']
         self.units = self.config['units']
-        self.handle_big_price = self.config['handle_big_price']
         self.plu_file_path = self.config['plu_file_path']
+        self.use_articul = self.config['use_articul']
+        self.use_description_as_hotkey = self.config['use_description_as_hotkey']
 
         self.mysql_conn = None
         self.last_changes = 0
@@ -87,7 +88,9 @@ class UpdateData:
                 G.gd_code, 
                 G.gd_name, 
                 G.gd_unit,  
-                P.prc_value
+                P.prc_value,
+                G.gd_articul,
+                G.gd_description
             FROM easytrade_db.dir_goods G
                 LEFT JOIN easytrade_db.dir_prices P ON G.gd_id = P.prc_good and P.prc_type = %s
             WHERE 
@@ -125,20 +128,24 @@ class UpdateData:
         product_data = self.fetch_products_data()
         if not product_data: return
         formatted_data = []
+        articul_list = []
         for product in product_data:
-            self.collect_data(row=product, data=formatted_data)
+            self.collect_data(row=product, data=formatted_data, seen_articul=articul_list)
 
         self.save_data_with_tabs(data=formatted_data, filename=self.plu_file_path)
         write_log_file("plu file successfully created.")
 
-    def collect_data(self, row: tuple, data: list):
+    def collect_data(self, row: tuple, data: list, seen_articul: list):
         unit_param = self.units_dict[row[3]]
-        product_price = int(row[4]) * 100
+        product_price = int(row[4])
+        articul = validate_unique_integer_string(row[5], seen_articul) if self.use_articul else False
+        lf_code = articul if articul else row[1]
+        hotkey = row[5] if self.use_description_as_hotkey and row[5] else 0
 
         collected_row = [
-            0, # Hotkey
+            hotkey, # Hotkey
             row[2], # Name
-            row[1], # LFCode
+            lf_code, # LFCode
             row[1], # Code
             unit_param["barcode_type"], # Barcode Type
             product_price, # Unit Price
@@ -151,7 +158,8 @@ class UpdateData:
             0, # Error(%)
             0, # Message1
             0, # Message2
-            unit_param["label_id"], # Label
+            0,
+            unit_param["label_id"],  # Label
             0, # Discount/Table
             0, # nutrition
         ]
