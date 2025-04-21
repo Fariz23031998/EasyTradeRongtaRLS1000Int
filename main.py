@@ -2,6 +2,9 @@ import mysql.connector
 from mysql.connector import Error
 import time
 from helper import create_query_arg, configure_settings, write_log_file, validate_unique_integer_string
+import sys
+
+# pyinstaller command: pyinstaller --onefile --name=EasyTradeRongtaRLS1000Int main.py
 
 class UpdateData:
     def __init__(self):
@@ -35,8 +38,7 @@ class UpdateData:
                 database=self.database,
             )
         except Error as e:
-            print(f"Can't connect to the MySQL. {e}.")
-            write_log_file(f"Can't connect to the MySQL.")
+            write_log_file(f"Can't connect to the MySQL. {e}")
             self.is_mysql_connected = False
             return False
         else:
@@ -65,8 +67,8 @@ class UpdateData:
 
         except Error as e:
             write_log_file(f"Can't connect to the MySQL. {e}")
-            self.connect_mysql()
-
+            self.is_mysql_connected = False
+            return False
         else:
             last_operation = last_changed_price if last_changed_price > last_changed_item else last_changed_item
 
@@ -113,6 +115,7 @@ class UpdateData:
             return False
 
         else:
+            mysql_cursor.close()
             if items: return items
 
     def save_data_with_tabs(self, data, filename):
@@ -167,12 +170,28 @@ class UpdateData:
 
 update_data = UpdateData()
 
+def main():
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "service":
+            write_log_file("Starting in service mode...")
+            while True:
+                try:
+                    if not update_data.is_mysql_connected:
+                        update_data.connect_mysql()
+                    else:
+                        update_data.create_plu_file()
 
-while True:
-    if update_data.is_mysql_connected:
-        update_data.create_plu_file()
+                    time.sleep(update_data.check_time)
+                except Exception as e:
+                    write_log_file(f"Service error: {str(e)}")
+                    time.sleep(60)  # Wait a bit before retrying if there's an error
+        else:
+            write_log_file(f"Not valid argument was passed: {sys.argv[1]}")
+            write_log_file(f"Invalid argument: {sys.argv[1]}. Use 'service' to run in service mode.")
     else:
-        update_data.connect_mysql()
+        # No arguments - run once
+        write_log_file("Running one-time PLU file creation...")
+        update_data.create_plu_file()
 
-    time.sleep(update_data.check_time)
-
+if __name__ == "__main__":
+    main()

@@ -13,7 +13,7 @@ DEFAULT_CONFIG = {
     "user": "easytrade",
     "password": "masterkey",
     "price_type": 1,
-    "check_time": 10,
+    "check_time": 60,
     "plu_file_path": r"C:\Program Files (x86)\RLS1000\easytrade_plu.txp",
     "use_articul": False,
     "use_description_as_hotkey": False,
@@ -29,8 +29,8 @@ DEFAULT_CONFIG = {
         {
             "name": "Штучный",
             "easy_trade_id": 1,
-            "scale_unit_id": 9,
-            "barcode_type": 7,
+            "scale_unit_id": "A",
+            "barcode_type": 9,
             "prefix": 23,
             "label_id": 0
         },
